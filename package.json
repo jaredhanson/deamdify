@@ -1,0 +1,45 @@
+{
+  "name": "deamdify",
+  "version": "0.0.0",
+  "description": "Browserify transform that converts AMD modules to CommonJS.",
+  "keywords": [
+    "browserify",
+    "transform",
+    "amd"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/jaredhanson/deamdify.git"
+  },
+  "bugs": {
+    "url": "http://github.com/jaredhanson/deamdify/issues"
+  },
+  "author": {
+    "name": "Jared Hanson",
+    "email": "jaredhanson@gmail.com",
+    "url": "http://www.jaredhanson.net/"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://www.opensource.org/licenses/MIT"
+    }
+  ],
+  "main": "index.js",
+  "dependencies": {
+    "through": "2.x.x",
+    "esprima": "1.x.x",
+    "estraverse": "1.x.x",
+    "escodegen": "0.0.x"
+  },
+  "devDependencies": {
+    "mocha": "1.x.x",
+    "chai": "1.x.x"
+  },
+  "scripts": {
+    "test": "NODE_PATH=./lib node_modules/.bin/mocha --reporter spec --require test/bootstrap/node test/*.test.js"
+  },
+  "engines": {
+    "node": ">= 0.6.0"
+  }
+}
