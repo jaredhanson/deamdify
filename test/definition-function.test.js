@@ -3,9 +3,9 @@ var deamdify = require('deamdify')
   , Stream = require('stream');
 
 
-describe('deamdify\'ing AMD module defining a name-value pair', function() {
+describe('deamdify\'ing AMD module using a definition function', function() {
   
-  var stream = deamdify('test/data/name-value-pair.js')
+  var stream = deamdify('test/data/definition-function.js')
   
   it('should return a stream', function() {
     expect(stream).to.be.an.instanceOf(Stream);
@@ -17,12 +17,12 @@ describe('deamdify\'ing AMD module defining a name-value pair', function() {
       output += buf;
     });
     stream.on('end', function() {
-      var expected = fs.readFileSync('test/data/name-value-pair.expect.js', 'utf8')
+      var expected = fs.readFileSync('test/data/definition-function.expect.js', 'utf8')
       expect(output).to.be.equal(expected);
       done();
     });
     
-    var file = fs.createReadStream('test/data/name-value-pair.js');
+    var file = fs.createReadStream('test/data/definition-function.js');
     file.pipe(stream);
   });
   

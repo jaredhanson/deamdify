@@ -22,16 +22,17 @@ module.exports = function (file) {
     
     // TODO: Ensure that define is a top-level function call.
     
-    estraverse.traverse(ast, {
+    estraverse.replace(ast, {
       leave: function(node) {
         if (isDefine(node)) {
           if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
             var fn = node.arguments[0];
             
-            // simplified CommonJS wrapper
-            if (fn.params.length == 3 && fn.params[0].name == 'require'
-                                      && fn.params[1].name == 'exports'
-                                      && fn.params[2].name == 'module') {
+            if (fn.params.length == 0) {
+              tast = createProgram(fn.body.body);
+              this.break();
+            } else if (fn.params.length > 0) {
+              // simplified CommonJS wrapper
               tast = createProgram(fn.body.body);
               this.break();
             }
@@ -39,8 +40,14 @@ module.exports = function (file) {
             // object literal
             var obj = node.arguments[0];
             
-            tast = createObjectExport(obj);
+            tast = createModuleExport(obj);
             this.break();
+          }
+        } else if (isReturn(node)) {
+          var parents = this.parents();
+          
+          if (parents.length == 5 && isDefine(parents[2])) {
+            return createModuleExport(node.argument);
           }
         }
       }
@@ -68,12 +75,16 @@ function isDefine(node) {
   ;
 }
 
+function isReturn(node) {
+  return node.type == 'ReturnStatement';
+}
+
 function createProgram(body) {
   return { type: 'Program',
     body: body };
 }
 
-function createObjectExport(obj) {
+function createModuleExport(obj) {
   return { type: 'Program',
     body: 
      [ { type: 'ExpressionStatement',
