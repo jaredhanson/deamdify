@@ -1,5 +1,6 @@
 SOURCES = index.js lib/*.js
-TESTS = test/*.test.js
+#TESTS = test/*.test.js
+TESTS = test/name-value-pair.test.js
 
 # ==============================================================================
 # Node Tests
