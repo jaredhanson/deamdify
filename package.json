@@ -1,7 +1,7 @@
 {
   "name": "deamdify",
   "version": "0.0.0",
-  "description": "Browserify transform that converts AMD modules to CommonJS.",
+  "description": "Browserify transform that converts AMD to CommonJS.",
   "keywords": [
     "browserify",
     "transform",
