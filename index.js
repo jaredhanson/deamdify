@@ -106,6 +106,8 @@ function createRequires(ids, vars) {
   var decls = [];
   
   for (var i = 0, len = ids.length; i < len; ++i) {
+    if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
+    
     decls.push({ type: 'VariableDeclarator',
       id: { type: 'Identifier', name: vars[i] },
       init: 
