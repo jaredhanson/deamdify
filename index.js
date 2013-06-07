@@ -26,14 +26,14 @@ module.exports = function (file) {
       leave: function(node) {
         if (isDefine(node)) {
           if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
-            var fn = node.arguments[0];
+            var factory = node.arguments[0];
             
-            if (fn.params.length == 0) {
-              tast = createProgram(fn.body.body);
+            if (factory.params.length == 0) {
+              tast = createProgram(factory.body.body);
               this.break();
-            } else if (fn.params.length > 0) {
+            } else if (factory.params.length > 0) {
               // simplified CommonJS wrapper
-              tast = createProgram(fn.body.body);
+              tast = createProgram(factory.body.body);
               this.break();
             }
           } else if (node.arguments.length == 1 && node.arguments[0].type == 'ObjectExpression') {
@@ -41,6 +41,15 @@ module.exports = function (file) {
             var obj = node.arguments[0];
             
             tast = createModuleExport(obj);
+            this.break();
+          } else if (node.arguments.length == 2 && node.arguments[0].type == 'ArrayExpression' && node.arguments[1].type == 'FunctionExpression') {
+            var dependencies = node.arguments[0]
+              , factory = node.arguments[1];
+            
+            var ids = dependencies.elements.map(function(el) { return el.value });
+            var vars = factory.params.map(function(el) { return el.name });
+            var reqs = createRequires(ids, vars);
+            tast = createProgram([reqs].concat(factory.body.body));
             this.break();
           }
         } else if (isReturn(node)) {
@@ -55,9 +64,9 @@ module.exports = function (file) {
     
     tast = tast || ast;
     
-    //console.log('-- TRANSFORMED AST --');
-    //console.log(util.inspect(tast, false, null));
-    //console.log('---------------------');
+    console.log('-- TRANSFORMED AST --');
+    console.log(util.inspect(tast, false, null));
+    console.log('---------------------');
     
     var out = escodegen.generate(tast);
     stream.queue(out);
@@ -84,17 +93,32 @@ function createProgram(body) {
     body: body };
 }
 
+function createRequires(ids, vars) {
+  var decls = [];
+  
+  for (var i = 0, len = ids.length; i < len; ++i) {
+    decls.push({ type: 'VariableDeclarator',
+      id: { type: 'Identifier', name: vars[i] },
+      init: 
+        { type: 'CallExpression',
+          callee: { type: 'Identifier', name: 'require' },
+          arguments: [ { type: 'Literal', value: ids[i] } ] } });
+  }
+  
+  return { type: 'VariableDeclaration',
+    declarations: decls,
+    kind: 'var' };
+}
+
 function createModuleExport(obj) {
-  return { type: 'Program',
-    body: 
-     [ { type: 'ExpressionStatement',
-         expression: 
-          { type: 'AssignmentExpression',
-            operator: '=',
-            left: 
-             { type: 'MemberExpression',
-               computed: false,
-               object: { type: 'Identifier', name: 'module' },
-               property: { type: 'Identifier', name: 'exports' } },
-            right: obj } } ] };
+  return { type: 'ExpressionStatement',
+    expression: 
+     { type: 'AssignmentExpression',
+       operator: '=',
+       left: 
+        { type: 'MemberExpression',
+          computed: false,
+          object: { type: 'Identifier', name: 'module' },
+          property: { type: 'Identifier', name: 'exports' } },
+       right: obj } };
 }
