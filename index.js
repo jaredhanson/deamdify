@@ -51,6 +51,15 @@ module.exports = function (file) {
             var reqs = createRequires(ids, vars);
             tast = createProgram([reqs].concat(factory.body.body));
             this.break();
+          } else if (node.arguments.length == 3 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'ArrayExpression' && node.arguments[2].type == 'FunctionExpression') {
+            var dependencies = node.arguments[1]
+              , factory = node.arguments[2];
+            
+            var ids = dependencies.elements.map(function(el) { return el.value });
+            var vars = factory.params.map(function(el) { return el.name });
+            var reqs = createRequires(ids, vars);
+            tast = createProgram([reqs].concat(factory.body.body));
+            this.break();
           }
         } else if (isReturn(node)) {
           var parents = this.parents();
