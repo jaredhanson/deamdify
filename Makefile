@@ -1,6 +1,6 @@
 SOURCES = index.js lib/*.js
 #TESTS = test/*.test.js
-TESTS = test/definition-function-with-dependencies.test.js
+TESTS = test/define-module-as-function.test.js
 
 # ==============================================================================
 # Node Tests
