@@ -14,15 +14,26 @@ module.exports = function (file) {
   function write(buf) { data += buf }
   function end() {
     var ast = esprima.parse(data)
-      , tast;
+      , tast
+      , isAMD = false;
     
-    console.log('-- ORIGINAL AST --');
-    console.log(util.inspect(ast, false, null));
-    console.log('------------------');
+    //console.log('-- ORIGINAL AST --');
+    //console.log(util.inspect(ast, false, null));
+    //console.log('------------------');
     
-    // TODO: Ensure that define is a top-level function call.
+    // TODO: Ensure that define is a free variable.
+    // TODO: Implement support for amdWeb UMD modules.
     
     estraverse.replace(ast, {
+      enter: function(node) {
+        if (isDefine(node)) {
+          var parents = this.parents();
+          
+          if (parents.length == 2 && parents[0].type == 'Program' && parents[1].type == 'ExpressionStatement') {
+            isAMD = true;
+          }
+        }
+      },
       leave: function(node) {
         if (isDefine(node)) {
           if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
@@ -64,18 +75,24 @@ module.exports = function (file) {
         } else if (isReturn(node)) {
           var parents = this.parents();
           
-          if (parents.length == 5 && isDefine(parents[2])) {
+          if (parents.length == 5 && isDefine(parents[2]) && isAMD) {
             return createModuleExport(node.argument);
           }
         }
       }
     });
     
+    if (!isAMD) {
+      stream.queue(data);
+      stream.queue(null);
+      return;
+    }
+    
     tast = tast || ast;
     
-    console.log('-- TRANSFORMED AST --');
-    console.log(util.inspect(tast, false, null));
-    console.log('---------------------');
+    //console.log('-- TRANSFORMED AST --');
+    //console.log(util.inspect(tast, false, null));
+    //console.log('---------------------');
     
     var out = escodegen.generate(tast);
     stream.queue(out);
