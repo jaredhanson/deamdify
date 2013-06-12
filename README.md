@@ -33,6 +33,22 @@ b.transform('deamdify');
 b.bundle().pipe(fs.createWriteStream('bundle.js'));
 ```
 
+#### package.json
+
+For packages that are written as AMD modules, add a browserify transform field
+to `package.json` and browserify will apply the transform to all modules in the
+package as it builds a bundle.
+
+```
+{
+  "name": "anchor",
+  "main": "main",
+  "browserify": {
+    "transform": "deamdify"
+  }
+}
+```
+
 ## Tests
 
     $ npm install
