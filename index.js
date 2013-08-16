@@ -63,7 +63,7 @@ module.exports = function (file, options) {
             node.alternate = null;
             isUMD = true;
           }
-          else if (isDefine(node)) {
+          else if (isDefine(node) || isAMDRequire(node)) {
             if (isUMD) {
               isAMD = true;
               return;
@@ -71,15 +71,15 @@ module.exports = function (file, options) {
             var parents = this.parents();
 
             // Check that this module is an AMD module, as evidenced by invoking
-            // `define` at the top-level.  Any CommonJS or UMD modules are pass
-            // through unmodified.
+            // `define` or `require([], fn)` at the top-level. Any CommonJS or
+            // UMD modules are pass through unmodified.`
             if (parents.length == 2 && parents[0].type == 'Program' && parents[1].type == 'ExpressionStatement') {
               isAMD = true;
             }
           }
         },
         leave: function(node) {
-          if (isAMD && isDefine(node)) {
+          if (isAMD && (isDefine(node) || isAMDRequire(node))) {
             if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
               var factory = node.arguments[0];
 
@@ -136,7 +136,7 @@ module.exports = function (file, options) {
           } else if (isReturn(node)) {
             var parents = this.parents();
 
-            if (parents.length == 5 && isDefine(parents[2]) && isAMD) {
+            if (parents.length == 5 && (isDefine(parents[2]) || isAMDRequire(parents[2])) && isAMD) {
               return createModuleExport(node.argument);
             }
           }
@@ -219,6 +219,15 @@ function isAMDCheck(node) {
       node.object.name === 'define' &&
       node.property.name === 'amd';
   }
+}
+
+function isAMDRequire(node) {
+  var callee = node.callee;
+  return callee
+    && node.type == 'CallExpression'
+    && callee.type == 'Identifier'
+    && callee.name == 'require'
+  ;
 }
 
 function isReturn(node) {
