@@ -1,4 +1,4 @@
 module.exports = {
-    color: 'black',
-    size: 'unisize'
+    color: "black",
+    size: "unisize"
 };

@@ -1,0 +1,9 @@
+src_files:
+- index.js
+- test/**/*.js
+launchers:
+  mocha:
+    command: NODE_PATH=.. mocha --require test/bootstrap/node -R tap test/*.test.js
+    protocol: tap
+launch_in_dev:
+- mocha

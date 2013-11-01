@@ -3,26 +3,26 @@ var deamdify = require('deamdify')
   , Stream = require('stream');
 
 
-describe.skip('deamdify\'ing AMD module using only special dependencies', function() {
+describe('deamdify\'ing a UMD module with only AMD support', function() {
   
-  var stream = deamdify('test/data/only-special-dependencies.js')
+  var stream = deamdify('test/data/umd-webamd.js')
   
   it('should return a stream', function() {
     expect(stream).to.be.an.instanceOf(Stream);
   });
   
-  it('should transform module', function(done) {
+  it('should not transform module', function(done) {
     var output = '';
     stream.on('data', function(buf) {
       output += buf;
     });
     stream.on('end', function() {
-      var expected = fs.readFileSync('test/data/only-special-dependencies.expect.js', 'utf8')
+      var expected = fs.readFileSync('test/data/umd-webamd.expect.js', 'utf8')
       expect(output).to.be.equal(expected);
       done();
     });
     
-    var file = fs.createReadStream('test/data/only-special-dependencies.js');
+    var file = fs.createReadStream('test/data/umd-webamd.js');
     file.pipe(stream);
   });
   

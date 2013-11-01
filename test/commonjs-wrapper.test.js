@@ -1,6 +1,7 @@
 var deamdify = require('deamdify')
   , fs = require('fs')
-  , Stream = require('stream');
+  , Stream = require('stream')
+  , esprima = require('esprima');
 
 
 describe('deamdify\'ing AMD module using simplified CommonJS wrapper', function() {

@@ -1,5 +1,5 @@
-var FOO = 'bar';
+var FOO = "bar";
 module.exports = {
-    color: 'black',
-    size: 'unisize'
-};
+        color: "black",
+        size: "unisize"
+    };
