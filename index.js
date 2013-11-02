@@ -161,7 +161,8 @@ function functionBody(funcNode){
 
 function parentFunction(node){
   var next = node.parent;
-  while(next && next.type !== 'FunctionExpression'){
+  while(next && next.type !== 'FunctionExpression' &&
+    next.type !== 'FunctionDeclaration'){
     next = next.parent;
   }
   return next;
