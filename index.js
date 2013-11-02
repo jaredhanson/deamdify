@@ -46,7 +46,10 @@ module.exports = function (file) {
       if (isUMDCheck(node)){
         // get rid of the if statement entirely and pull
         // the consequent block up
-        node.update(node.consequent.body[0].expression.source())
+        var src = node.consequent.body.map(function(exp){
+          return exp.source()
+        }).join('\n')
+        node.update(src)
       }
       if (isDefineCall(node)){
 
@@ -77,11 +80,9 @@ module.exports = function (file) {
       }
     });
 
-    if (seemsToSupportsCommonJS && !commonJSWrapper){
-      stream.queue(data);
-    }else{
-      stream.queue(output);
-    }
+    data = (seemsToSupportsCommonJS && !commonJSWrapper) ? data : output + ''
+    
+    stream.queue(data);
     stream.queue(null);
     return;
   }
@@ -124,7 +125,11 @@ function renderModuleIdentifier(deps, identifier){
       deps.map(function(dep, i){
         return '  var $' + i + ' = require("' + dep + '");'
       }).join('\n') + '\n' +
+      'if (typeof ' + identifier.name + ' === "function"){\n' +
       '  module.exports = ' + identifier.name + '(' + deps.map(function(d, i){ return '$' + i }).join(', ') + ');\n' +
+      '}else{\n' +
+      '  module.exports = ' + identifier.name + ';\n' +
+      '}\n' +
     '}());'
 }
 
