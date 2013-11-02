@@ -1,1 +1,4 @@
-module.exports = factory();
+;(function(){
+
+  module.exports = factory();
+}());

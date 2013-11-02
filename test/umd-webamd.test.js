@@ -11,7 +11,7 @@ describe('deamdify\'ing a UMD module with only AMD support', function() {
     expect(stream).to.be.an.instanceOf(Stream);
   });
   
-  it('should not transform module', function(done) {
+  it('should transform module', function(done) {
     var output = '';
     stream.on('data', function(buf) {
       output += buf;
