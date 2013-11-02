@@ -61,9 +61,9 @@ module.exports = function (file) {
         }
         if (args.length > 0){
           moduleDef = args.shift()
-          if (moduleDef.type === 'FunctionExpression'){
+          if (isFunction(moduleDef)){
             render = renderModuleFactory
-          }else if (moduleDef.type === 'Identifier'){
+          }else if (isIdentifier(moduleDef)){
             render = renderModuleIdentifier
           }
         }
