@@ -33,7 +33,7 @@ module.exports = function (file) {
     var seemsToSupportsCommonJS = false
     var commonJSWrapper = false
 
-    var output = falafel(data, function(node){
+    var output = falafel(data, {raw: true}, function(node){
       if (node.type === 'ReturnStatement'){
         var fun = parentFunction(node)
         if (isDefineCall(fun.parent)){
@@ -57,6 +57,7 @@ module.exports = function (file) {
 
         if (isString(args[0])) args.shift()
         if (isArray(args[0])){
+
           deps = getDeps(args.shift())
         }
         if (args.length > 0){
@@ -72,7 +73,6 @@ module.exports = function (file) {
           commonJSWrapper = true;
         }
         node.update(render(deps, moduleDef))
-        
 
       }
     });
