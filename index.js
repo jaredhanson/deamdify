@@ -32,9 +32,15 @@ module.exports = function (file) {
   
   function write(buf) { data += buf }
   function end() {
-    var ast = esprima.parse(data)
+    var ast
       , tast
       , isAMD = false;
+    
+    try {
+      ast = esprima.parse(data)
+    } catch (error) {
+      throw 'Error deamdifying ' + file + ': ' + error;
+    }
     
     //console.log('-- ORIGINAL AST --');
     //console.log(util.inspect(ast, false, null));
