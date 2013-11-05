@@ -29,16 +29,16 @@
   "main": "index.js",
   "dependencies": {
     "through": "2.x.x",
-    "esprima": "1.x.x",
-    "estraverse": "1.x.x",
-    "escodegen": "0.0.x"
+    "lodash.zip": "~2.2.1",
+    "falafel": "~0.3.1"
   },
   "devDependencies": {
-    "mocha": "1.x.x",
-    "chai": "1.x.x"
+    "async": "~0.2.9",
+    "diff": "~1.0.7",
+    "colors": "~0.6.2"
   },
   "scripts": {
-    "test": "NODE_PATH=.. node_modules/.bin/mocha --reporter spec --require test/bootstrap/node test/*.test.js"
+    "test": "node tests.js"
   },
   "engines": {
     "node": ">= 0.6.0"

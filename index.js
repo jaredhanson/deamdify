@@ -2,12 +2,8 @@
  * Module dependencies.
  */
 var through = require('through')
-  , esprima = require('esprima')
-  , estraverse = require('estraverse')
-  , escodegen = require('escodegen')
-  , util = require('util');
-
-
+  , falafel = require('falafel')
+  , zip = require('lodash.zip');
 /**
  * Transform AMD to CommonJS.
  *
@@ -31,154 +27,207 @@ module.exports = function (file) {
   return stream;
   
   function write(buf) { data += buf }
+
   function end() {
-    var ast = esprima.parse(data)
-      , tast
-      , isAMD = false;
     
-    //console.log('-- ORIGINAL AST --');
-    //console.log(util.inspect(ast, false, null));
-    //console.log('------------------');
-    
-    // TODO: Ensure that define is a free variable.
-    // TODO: Implement support for amdWeb UMD modules.
-    
-    estraverse.replace(ast, {
-      enter: function(node) {
-        if (isDefine(node)) {
-          var parents = this.parents();
-          
-          // Check that this module is an AMD module, as evidenced by invoking
-          // `define` at the top-level.  Any CommonJS or UMD modules are pass
-          // through unmodified.
-          if (parents.length == 2 && parents[0].type == 'Program' && parents[1].type == 'ExpressionStatement') {
-            isAMD = true;
-          }
-        }
-      },
-      leave: function(node) {
-        if (isDefine(node)) {
-          if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
-            var factory = node.arguments[0];
-            
-            if (factory.params.length == 0) {
-              tast = createProgram(factory.body.body);
-              this.break();
-            } else if (factory.params.length > 0) {
-              // simplified CommonJS wrapper
-              tast = createProgram(factory.body.body);
-              this.break();
-            }
-          } else if (node.arguments.length == 1 && node.arguments[0].type == 'ObjectExpression') {
-            // object literal
-            var obj = node.arguments[0];
-            
-            tast = createModuleExport(obj);
-            this.break();
-          } else if (node.arguments.length == 2 && node.arguments[0].type == 'ArrayExpression' && node.arguments[1].type == 'FunctionExpression') {
-            var dependencies = node.arguments[0]
-              , factory = node.arguments[1];
-            
-            var ids = dependencies.elements.map(function(el) { return el.value });
-            var vars = factory.params.map(function(el) { return el.name });
-            var reqs = createRequires(ids, vars);
-            if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
-            } else {
-              tast = createProgram(factory.body.body);
-            }
-            this.break();
-          } else if (node.arguments.length == 3 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'ArrayExpression' && node.arguments[2].type == 'FunctionExpression') {
-            var dependencies = node.arguments[1]
-              , factory = node.arguments[2];
-            
-            var ids = dependencies.elements.map(function(el) { return el.value });
-            var vars = factory.params.map(function(el) { return el.name });
-            var reqs = createRequires(ids, vars);
-            if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
-            } else {
-              tast = createProgram(factory.body.body);
-            }
-            this.break();
-          }
-        } else if (isReturn(node)) {
-          var parents = this.parents();
-          
-          if (parents.length == 5 && isDefine(parents[2]) && isAMD) {
-            return createModuleExport(node.argument);
-          }
+    var seemsToSupportsCommonJS = false;
+    var commonJSWrapper = false;
+
+    var output = falafel(data, {raw: true}, function(node){
+      if (node.type === 'ReturnStatement'){
+        var fun = parentFunction(node);
+        if (isDefineCall(fun.parent)){
+          node.update('module.exports = ' + node.argument.source());
         }
       }
+      if (isCommonJSRequire(node)){
+        seemsToSupportsCommonJS = true;
+      }
+      if (isUMDCheck(node)){
+        // get rid of the if statement entirely and pull
+        // the consequent block up
+        var src = node.consequent.body.map(function(exp){
+          return exp.source();
+        }).join('\n');
+        node.update(src);
+      }
+      if (isDefineCall(node)){
+
+        var args = node.arguments.slice(0)
+          , moduleDef
+          , deps = []
+          , render = renderModuleLiteral;
+
+        if (isString(args[0])) args.shift();
+        if (isArray(args[0])){
+          deps = getDeps(args.shift());
+        }
+        if (args.length > 0){
+          moduleDef = args.shift();
+          if (isFunction(moduleDef)){
+            render = renderModuleFactory;
+          }else if (isIdentifier(moduleDef)){
+            render = renderModuleIdentifier;
+          }
+        }
+
+        if (isCommonJSWrapper(deps, moduleDef)){
+          commonJSWrapper = true;
+        }
+        node.update(render(deps, moduleDef));
+      }
     });
+
+    data = (seemsToSupportsCommonJS && !commonJSWrapper) ? data : bindWindowWrapper(output + '');
     
-    if (!isAMD) {
-      stream.queue(data);
-      stream.queue(null);
-      return;
-    }
-    
-    tast = tast || ast;
-    
-    //console.log('-- TRANSFORMED AST --');
-    //console.log(util.inspect(tast, false, null));
-    //console.log('---------------------');
-    
-    var out = escodegen.generate(tast);
-    stream.queue(out);
+    stream.queue(data);
     stream.queue(null);
+    return;
   }
 };
 
-
-function isDefine(node) {
-  var callee = node.callee;
-  return callee
-    && node.type == 'CallExpression'
-    && callee.type == 'Identifier'
-    && callee.name == 'define'
-  ;
+function renderModuleFactory(deps, factory){
+  var defVars = getFuncParams(factory);
+  var reqs = requiresSection(deps, defVars);
+  var body = functionBody(factory);
+  return reqs + body;
 }
 
-function isReturn(node) {
-  return node.type == 'ReturnStatement';
+function renderModuleLiteral(deps, literal){
+  var reqs = requiresSection(deps, []);
+  return reqs + 'module.exports = ' + literal.source();
 }
 
-function createProgram(body) {
-  return { type: 'Program',
-    body: body };
+function requiresSection(deps, depVars){
+  var vars = zip(deps, depVars);
+  var ret = vars
+    .filter(function(vr){
+      var dep = vr[0]
+      return dep && ['require', 'module', 'exports'].indexOf(dep) === -1
+    })
+    .map(function(vr){
+      var def = vr[0]
+      var depVar = vr[1]
+      if (def){
+        return 'var ' + depVar + ' = require("' + def + '");'
+      }else{
+        return 'var ' + depVar
+      }
+    }).join('\n');
+  if (ret.length > 0) ret += '\n';
+  return ret;
 }
 
-function createRequires(ids, vars) {
-  var decls = [];
-  
-  for (var i = 0, len = ids.length; i < len; ++i) {
-    if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
-    
-    decls.push({ type: 'VariableDeclarator',
-      id: { type: 'Identifier', name: vars[i] },
-      init: 
-        { type: 'CallExpression',
-          callee: { type: 'Identifier', name: 'require' },
-          arguments: [ { type: 'Literal', value: ids[i] } ] } });
+function bindWindowWrapper(code){
+  return ';(function(){\n' +
+    code +
+  '\n}.call(window));'
+}
+
+function renderModuleIdentifier(deps, identifier){
+  return ';(function(){\n' +
+      deps.map(function(dep, i){
+        return '  var $' + i + ' = require("' + dep + '");'
+      }).join('\n') + '\n' +
+      'if (typeof ' + identifier.name + ' === "function"){\n' +
+      '  module.exports = ' + identifier.name + '(' + deps.map(function(d, i){ return '$' + i }).join(', ') + ');\n' +
+      '}else{\n' +
+      '  module.exports = ' + identifier.name + ';\n' +
+      '}\n' +
+    '}());';
+}
+
+function isArray(node){
+  return node.type === 'ArrayExpression';
+}
+
+function isString(node){
+  return node.type === 'Literal' &&
+      typeof eval(node.raw) === 'string';
+}
+
+function isFunction(node){
+  return node.type === 'FunctionExpression';
+}
+
+function isIdentifier(node){
+  return node.type === 'Identifier';
+}
+
+function isDefineCall(node){
+  return node.type === 'CallExpression' &&
+    node.callee.name === 'define';
+}
+
+function functionBody(funcNode){
+  return funcNode.body.body.map(function(b){
+    return b.source();
+  }).join('\n');
+}
+
+function parentFunction(node){
+  var next = node.parent;
+  while(next && next.type !== 'FunctionExpression' &&
+    next.type !== 'FunctionDeclaration'){
+    next = next.parent;
   }
-  
-  if (decls.length == 0) { return null; }
-  
-  return { type: 'VariableDeclaration',
-    declarations: decls,
-    kind: 'var' };
+  return next;
 }
 
-function createModuleExport(obj) {
-  return { type: 'ExpressionStatement',
-    expression: 
-     { type: 'AssignmentExpression',
-       operator: '=',
-       left: 
-        { type: 'MemberExpression',
-          computed: false,
-          object: { type: 'Identifier', name: 'module' },
-          property: { type: 'Identifier', name: 'exports' } },
-       right: obj } };
+function getDeps(arg){
+  return arg.elements.map(function(s){
+    return s.value;
+  });
 }
+
+function getFuncParams(func){
+  return func.params.map(function(p){
+    return p.name;
+  });
+}
+
+function isCommonJSRequire(node){
+  return node.type === 'CallExpression' &&
+    node.callee.name === 'require' &&
+    node.arguments.length === 1 &&
+    node.arguments[0].type === 'Literal' &&
+    typeof eval(node.arguments[0].raw) === 'string';
+}
+
+function isCommonJSWrapper(deps, factory){
+  if (!factory || factory.type !== 'FunctionExpression') return false;
+  var params = factory.params;
+  return factory && params.length >= 3 &&
+    params[0].name === 'require' &&
+    params[1].name === 'exports' &&
+    params[2].name === 'module';
+}
+
+function isUMDCheck(node){
+  return node.type === 'IfStatement' &&
+    node.test.type === 'LogicalExpression' &&
+    isTypeCheck(node.test.left) &&
+    isAmdPropertyCheck(node.test.right);
+
+  function isTypeCheck(node){
+    return node.type === 'BinaryExpression' &&
+      (node.operator === '===' || node.operator === '==') &&
+      isTypeof(node.left) &&
+      node.right.type === 'Literal' &&
+      node.right.value === 'function';
+  }
+
+  function isTypeof(node){
+    return node.type === 'UnaryExpression' &&
+      node.operator === 'typeof' &&
+      node.argument.type === 'Identifier' &&
+      node.argument.name === 'define';
+  }
+
+  function isAmdPropertyCheck(node){
+    return node.type === 'MemberExpression' &&
+      node.object.name === 'define' &&
+      node.property.name === 'amd';
+  }
+}
+
