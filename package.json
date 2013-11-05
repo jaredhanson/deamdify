@@ -33,7 +33,9 @@
     "falafel": "~0.3.1"
   },
   "devDependencies": {
-    "async": "~0.2.9"
+    "async": "~0.2.9",
+    "diff": "~1.0.7",
+    "colors": "~0.6.2"
   },
   "scripts": {
     "test": "node tests.js"

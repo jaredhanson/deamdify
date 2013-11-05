@@ -1,6 +1,8 @@
 var deamdify = require('deamdify')
 var fs = require('fs')
 var async = require('async')
+var diff = require('diff')
+var colors = require('colors')
 
 function test(filename, done){
 
@@ -20,6 +22,14 @@ stream.on('end', function() {
   fs.writeFileSync('tests/' + filename + '/actual.js', output)
   if (output !== expected){
     console.error('not ok', filename)
+    console.error()
+    var res = diff.diffChars(expected, output)
+    res.forEach(function(part){
+      var color = part.added ? 'green' :
+        part.removed ? 'red' : 'grey'
+      process.stderr.write(part.value[color])
+    })
+    console.error()
     done(new Error('not ok ' + filename))
   }else{
     console.log('ok', filename)
