@@ -18,6 +18,7 @@ describe('deamdify\'ing a UMD module with only AMD support with dependencies', f
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/umd-webamd-with-deps.expect.js', 'utf8')
+      fs.writeFileSync('test/data/umd-webamd-with-deps.actual.js', output)
       expect(output).to.be.equal(expected);
       done();
     });

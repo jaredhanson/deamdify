@@ -1,6 +1,8 @@
 src_files:
 - index.js
 - test/**/*.js
+src_files_ignore:
+- test/**/*.actual.js
 launchers:
   mocha:
     command: NODE_PATH=.. mocha --require test/bootstrap/node -R tap test/*.test.js

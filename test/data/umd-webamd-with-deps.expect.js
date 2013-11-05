@@ -1,4 +1,5 @@
 ;(function(){
+;(function(){
   var $0 = require("jquery");
   var $1 = require("underscore");
 if (typeof factory === "function"){
@@ -7,3 +8,4 @@ if (typeof factory === "function"){
   module.exports = factory;
 }
 }());;
+}.call(window));

@@ -78,7 +78,7 @@ module.exports = function (file) {
       }
     });
 
-    data = (seemsToSupportsCommonJS && !commonJSWrapper) ? data : output + '';
+    data = (seemsToSupportsCommonJS && !commonJSWrapper) ? data : bindWindowWrapper(output + '');
     
     stream.queue(data);
     stream.queue(null);
@@ -116,6 +116,12 @@ function requiresSection(deps, depVars){
     }).join('\n');
   if (ret.length > 0) ret += '\n';
   return ret;
+}
+
+function bindWindowWrapper(code){
+  return ';(function(){\n' +
+    code +
+  '\n}.call(window));'
 }
 
 function renderModuleIdentifier(deps, identifier){

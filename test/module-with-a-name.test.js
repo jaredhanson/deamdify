@@ -18,6 +18,7 @@ describe('deamdify\'ing AMD module that has a name', function() {
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/module-with-a-name.expect.js', 'utf8')
+      fs.writeFileSync('test/data/module-with-a-name.actual.js', output)
       expect(output).to.be.equal(expected);
       done();
     });

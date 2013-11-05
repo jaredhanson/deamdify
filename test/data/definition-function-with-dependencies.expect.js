@@ -1,3 +1,4 @@
+;(function(){
 //my/shirt.js now has some dependencies, a cart and inventory
 //module in the same directory as shirt.js
 var cart = require("./cart");
@@ -11,3 +12,4 @@ module.exports = {
                 cart.add(this);
             }
         };
+}.call(window));
