@@ -83,7 +83,7 @@ module.exports = function (file) {
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
             if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
+              tast = createProgram(reqs.concat(factory.body.body));
             } else {
               tast = createProgram(factory.body.body);
             }
@@ -96,7 +96,7 @@ module.exports = function (file) {
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
             if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
+              tast = createProgram(reqs.concat(factory.body.body));
             } else {
               tast = createProgram(factory.body.body);
             }
@@ -150,24 +150,30 @@ function createProgram(body) {
 }
 
 function createRequires(ids, vars) {
-  var decls = [];
+  var decls = [], bares = [], req;
   
   for (var i = 0, len = ids.length; i < len; ++i) {
     if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
     
-    decls.push({ type: 'VariableDeclarator',
-      id: { type: 'Identifier', name: vars[i] },
-      init: 
-        { type: 'CallExpression',
+    req = { type: 'CallExpression',
           callee: { type: 'Identifier', name: 'require' },
-          arguments: [ { type: 'Literal', value: ids[i] } ] } });
+          arguments: [ { type: 'Literal', value: ids[i] } ] };
+
+    if (vars[i]) {
+      decls.push({ type: 'VariableDeclarator',
+        id: { type: 'Identifier', name: vars[i] },
+        init: req });
+    } else {
+      bares.push({ type: 'ExpressionStatement',
+        expression: req });
+    }
   }
   
   if (decls.length == 0) { return null; }
   
-  return { type: 'VariableDeclaration',
+  return [{ type: 'VariableDeclaration', 
     declarations: decls,
-    kind: 'var' };
+    kind: 'var' }].concat(bares);
 }
 
 function createModuleExport(obj) {
