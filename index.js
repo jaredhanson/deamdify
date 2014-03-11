@@ -94,6 +94,10 @@ module.exports = function (file) {
               tast = createProgram(factory.body.body);
             }
             this.break();
+          } else if (node.arguments.length == 2 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'FunctionExpression') {
+            var factory = node.arguments[1];
+            tast = createProgram(factory.body.body);
+            this.break();
           } else if (node.arguments.length == 3 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'ArrayExpression' && node.arguments[2].type == 'FunctionExpression') {
             var dependencies = node.arguments[1]
               , factory = node.arguments[2];
