@@ -37,7 +37,9 @@ module.exports = function (file, options) {
   function end() {
     var ast
       , tast
-      , isAMD = false;
+      , isAMD = false
+      , isUMD = false
+      , supportsCommonJs = false;
 
     if (ext.toLowerCase() === '.js') {
       try {
@@ -51,11 +53,21 @@ module.exports = function (file, options) {
       //console.log('------------------');
 
       // TODO: Ensure that define is a free variable.
-      // TODO: Implement support for amdWeb UMD modules.
-
       estraverse.replace(ast, {
         enter: function(node) {
-          if (isDefine(node)) {
+          if (isCommonJsCheck(node)) {
+            supportsCommonJs = true;
+          }
+          else if (!supportsCommonJs && isAMDCheck(node)) {
+            node.test = { type: 'Literal', value: true, raw: 'true' };
+            node.alternate = null;
+            isUMD = true;
+          }
+          else if (isDefine(node)) {
+            if (isUMD) {
+              isAMD = true;
+              return;
+            }
             var parents = this.parents();
 
             // Check that this module is an AMD module, as evidenced by invoking
@@ -67,7 +79,7 @@ module.exports = function (file, options) {
           }
         },
         leave: function(node) {
-          if (isDefine(node)) {
+          if (isAMD && isDefine(node)) {
             if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
               var factory = node.arguments[0];
 
@@ -85,6 +97,11 @@ module.exports = function (file, options) {
 
               tast = createModuleExport(obj);
               this.break();
+            } else if (node.arguments.length == 1 && node.arguments[0].type == 'Identifier') {
+              // reference
+              var obj = node.arguments[0];
+
+              return createModuleExport(obj).expression;
             } else if (node.arguments.length == 2 && node.arguments[0].type == 'ArrayExpression' && node.arguments[1].type == 'FunctionExpression') {
               var dependencies = node.arguments[0]
                 , factory = node.arguments[1];
@@ -153,6 +170,55 @@ function isDefine(node) {
     && callee.type == 'Identifier'
     && callee.name == 'define'
   ;
+}
+
+function isCommonJsCheck(node) {
+  if (typeof exports === 'object')
+  return node.type === 'IfStatement' &&
+    isTypeCheck(node.test);
+
+  function isTypeCheck(node) {
+    return node.type === 'BinaryExpression' &&
+      (node.operator === '===' || node.operator === '==') &&
+      isTypeof(node.left) &&
+      node.right.type === 'Literal' &&
+      node.right.value === 'object';
+  }
+
+  function isTypeof(node) {
+    return node.type === 'UnaryExpression' &&
+      node.operator === 'typeof' &&
+      node.argument.type === 'Identifier' &&
+      node.argument.name === 'exports';
+  }
+}
+
+function isAMDCheck(node) {
+  return node.type === 'IfStatement' &&
+    node.test.type === 'LogicalExpression' &&
+    isTypeCheck(node.test.left) &&
+    isAmdPropertyCheck(node.test.right);
+
+  function isTypeCheck(node) {
+    return node.type === 'BinaryExpression' &&
+      (node.operator === '===' || node.operator === '==') &&
+      isTypeof(node.left) &&
+      node.right.type === 'Literal' &&
+      node.right.value === 'function';
+  }
+
+  function isTypeof(node) {
+    return node.type === 'UnaryExpression' &&
+      node.operator === 'typeof' &&
+      node.argument.type === 'Identifier' &&
+      node.argument.name === 'define';
+  }
+
+  function isAmdPropertyCheck(node) {
+    return node.type === 'MemberExpression' &&
+      node.object.name === 'define' &&
+      node.property.name === 'amd';
+  }
 }
 
 function isReturn(node) {
