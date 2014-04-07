@@ -18,7 +18,7 @@ describe('deamdify\'ing AMD module using a definition function with dependencies
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/definition-function-with-dependencies.expect.js', 'utf8')
-      expect(output).to.be.equal(expected);
+      expect(output.trim()).to.be.equal(expected.trim());
       done();
     });
     

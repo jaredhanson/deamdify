@@ -1,3 +1,7 @@
-exports.verb = function () {
-    return 'export';
-};
+before();
+(function () {
+    exports.verb = function () {
+        return 'export';
+    };
+}());
+after();

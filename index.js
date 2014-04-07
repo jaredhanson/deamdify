@@ -45,67 +45,47 @@ module.exports = function (file) {
     
     estraverse.replace(ast, {
       enter: function(node) {
-        if (isDefine(node)) {
-          var parents = this.parents();
-          
-          // Check that this module is an AMD module, as evidenced by invoking
-          // `define` at the top-level.  Any CommonJS or UMD modules are pass
-          // through unmodified.
-          if (parents.length == 2 && parents[0].type == 'Program' && parents[1].type == 'ExpressionStatement') {
-            isAMD = true;
-          }
+        // Check that this module is an AMD module, as evidenced by invoking
+        // `define` at the top-level.  Any CommonJS or UMD modules are pass
+        // through unmodified.
+        if (isDefine(node) && this.parents().length == 1) {
+          isAMD = true;
         }
       },
       leave: function(node) {
-        if (isDefine(node)) {
-          if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
-            var factory = node.arguments[0];
-            
-            if (factory.params.length == 0) {
-              tast = createProgram(factory.body.body);
-              this.break();
-            } else if (factory.params.length > 0) {
-              // simplified CommonJS wrapper
-              tast = createProgram(factory.body.body);
-              this.break();
-            }
-          } else if (node.arguments.length == 1 && node.arguments[0].type == 'ObjectExpression') {
-            // object literal
-            var obj = node.arguments[0];
-            
-            tast = createModuleExport(obj);
-            this.break();
-          } else if (node.arguments.length == 2 && node.arguments[0].type == 'ArrayExpression' && node.arguments[1].type == 'FunctionExpression') {
-            var dependencies = node.arguments[0]
-              , factory = node.arguments[1];
+
+        if (isDefine(node) && this.parents().length == 1) {
+
+          var call = node.expression;
+
+          if (call.arguments.length == 1 && call.arguments[0].type == 'FunctionExpression') {
+            return iife(call.arguments[0].body);
+
+          } else if (call.arguments.length == 1 && call.arguments[0].type == 'ObjectExpression') {
+            return createModuleExport(call.arguments[0]);
+
+          } else if (call.arguments.length == 2 && call.arguments[0].type == 'ArrayExpression' && call.arguments[1].type == 'FunctionExpression') {
+            var dependencies = call.arguments[0]
+              , factory = call.arguments[1];
             
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
-            if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
-            } else {
-              tast = createProgram(factory.body.body);
-            }
-            this.break();
-          } else if (node.arguments.length == 3 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'ArrayExpression' && node.arguments[2].type == 'FunctionExpression') {
-            var dependencies = node.arguments[1]
-              , factory = node.arguments[2];
+            return iife(reqs.concat(factory.body.body));
+
+          } else if (call.arguments.length == 3 && call.arguments[0].type == 'Literal' && call.arguments[1].type == 'ArrayExpression' && call.arguments[2].type == 'FunctionExpression') {
+            var dependencies = call.arguments[1]
+              , factory = call.arguments[2];
             
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
-            if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
-            } else {
-              tast = createProgram(factory.body.body);
-            }
-            this.break();
+            return iife(reqs.concat(factory.body.body));
           }
         } else if (isReturn(node)) {
           var parents = this.parents();
-          
-          if (parents.length == 5 && isDefine(parents[2]) && isAMD) {
+
+          if (parents.length == 5 && isDefine(parents[1]) && isAMD) {
             return createModuleExport(node.argument);
           }
         }
@@ -132,11 +112,10 @@ module.exports = function (file) {
 
 
 function isDefine(node) {
-  var callee = node.callee;
-  return callee
-    && node.type == 'CallExpression'
-    && callee.type == 'Identifier'
-    && callee.name == 'define'
+  return node.type == 'ExpressionStatement'
+    && node.expression.type == 'CallExpression'
+    && node.expression.callee.type == 'Identifier'
+    && node.expression.callee.name == 'define'
   ;
 }
 
@@ -163,11 +142,11 @@ function createRequires(ids, vars) {
           arguments: [ { type: 'Literal', value: ids[i] } ] } });
   }
   
-  if (decls.length == 0) { return null; }
+  if (decls.length == 0) { return []; }
   
-  return { type: 'VariableDeclaration',
+  return [{ type: 'VariableDeclaration',
     declarations: decls,
-    kind: 'var' };
+    kind: 'var' }];
 }
 
 function createModuleExport(obj) {
@@ -181,4 +160,26 @@ function createModuleExport(obj) {
           object: { type: 'Identifier', name: 'module' },
           property: { type: 'Identifier', name: 'exports' } },
        right: obj } };
+}
+
+function iife(body) {
+  if (Array.isArray(body)) {
+    body = {
+      type: 'BlockStatement',
+      body: body
+    };
+  }
+  return {
+    type: 'ExpressionStatement',
+    expression: {
+      type: 'CallExpression',
+      callee: {
+        type: 'FunctionExpression',
+        params: [],
+        defaults: [],
+        body: body
+      },
+      arguments: []
+    }
+  };
 }

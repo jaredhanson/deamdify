@@ -18,7 +18,7 @@ describe('deamdify\'ing AMD module using special dependencies', function() {
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/special-dependencies.expect.js', 'utf8')
-      expect(output).to.be.equal(expected);
+      expect(output.trim()).to.be.equal(expected.trim());
       done();
     });
     

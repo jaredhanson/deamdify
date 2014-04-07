@@ -18,7 +18,7 @@ describe('deamdify\'ing AMD module defining a module as a function', function() 
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/define-module-as-function.expect.js', 'utf8')
-      expect(output).to.be.equal(expected);
+      expect(output.trim()).to.be.equal(expected.trim());
       done();
     });
     

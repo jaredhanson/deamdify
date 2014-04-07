@@ -18,7 +18,7 @@ describe('deamdify\'ing a UMD module with CommonJS and AMD support', function() 
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/umd-commonjs-amd.js', 'utf8')
-      expect(output).to.be.equal(expected);
+      expect(output.trim()).to.be.equal(expected.trim());
       done();
     });
     
