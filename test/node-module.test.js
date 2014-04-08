@@ -18,7 +18,7 @@ describe('deamdify\'ing a Node module', function() {
     });
     stream.on('end', function() {
       var expected = fs.readFileSync('test/data/node-module.js', 'utf8')
-      expect(output).to.be.equal(expected);
+      expect(output.trim()).to.be.equal(expected.trim());
       done();
     });
     

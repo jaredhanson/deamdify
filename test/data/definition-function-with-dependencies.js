@@ -1,3 +1,4 @@
+before();
 //my/shirt.js now has some dependencies, a cart and inventory
 //module in the same directory as shirt.js
 define(["./cart", "./inventory"], function(cart, inventory) {
@@ -14,3 +15,4 @@ define(["./cart", "./inventory"], function(cart, inventory) {
         }
     }
 );
+after();

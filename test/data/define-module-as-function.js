@@ -1,3 +1,4 @@
+before();
 define(["my/cart", "my/inventory"],
     function(cart, inventory) {
         //return a function to define "foo/title".
@@ -8,3 +9,4 @@ define(["my/cart", "my/inventory"],
         }
     }
 );
+after();

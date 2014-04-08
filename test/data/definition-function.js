@@ -1,3 +1,4 @@
+before();
 define(function () {
     var FOO = "bar";
 
@@ -6,3 +7,4 @@ define(function () {
         size: "unisize"
     }
 });
+after();
