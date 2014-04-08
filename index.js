@@ -33,7 +33,6 @@ module.exports = function (file) {
   function write(buf) { data += buf }
   function end() {
     var ast = esprima.parse(data)
-      , tast
       , isAMD = false;
     
     //console.log('-- ORIGINAL AST --');
@@ -44,22 +43,15 @@ module.exports = function (file) {
     // TODO: Implement support for amdWeb UMD modules.
     
     estraverse.replace(ast, {
-      enter: function(node) {
-        // Check that this module is an AMD module, as evidenced by invoking
-        // `define` at the top-level.  Any CommonJS or UMD modules are pass
-        // through unmodified.
-        if (isDefine(node) && this.parents().length == 1) {
-          isAMD = true;
-        }
-      },
       leave: function(node) {
 
         if (isDefine(node) && this.parents().length == 1) {
+          isAMD = true;
 
           var call = node.expression;
 
           if (call.arguments.length == 1 && call.arguments[0].type == 'FunctionExpression') {
-            return iife(call.arguments[0].body);
+            return createIife(call.arguments[0].body);
 
           } else if (call.arguments.length == 1 && call.arguments[0].type == 'ObjectExpression') {
             return createModuleExport(call.arguments[0]);
@@ -71,7 +63,7 @@ module.exports = function (file) {
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
-            return iife(reqs.concat(factory.body.body));
+            return createIife(reqs.concat(factory.body.body));
 
           } else if (call.arguments.length == 3 && call.arguments[0].type == 'Literal' && call.arguments[1].type == 'ArrayExpression' && call.arguments[2].type == 'FunctionExpression') {
             var dependencies = call.arguments[1]
@@ -80,32 +72,19 @@ module.exports = function (file) {
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
-            return iife(reqs.concat(factory.body.body));
+            return createIife(reqs.concat(factory.body.body));
           }
         } else if (isReturn(node)) {
           var parents = this.parents();
 
-          if (parents.length == 5 && isDefine(parents[1]) && isAMD) {
+          if (parents.length == 5 && isDefine(parents[1])) {
             return createModuleExport(node.argument);
           }
         }
       }
     });
     
-    if (!isAMD) {
-      stream.queue(data);
-      stream.queue(null);
-      return;
-    }
-    
-    tast = tast || ast;
-    
-    //console.log('-- TRANSFORMED AST --');
-    //console.log(util.inspect(tast, false, null));
-    //console.log('---------------------');
-    
-    var out = escodegen.generate(tast);
-    stream.queue(out);
+    stream.queue(isAMD ? escodegen.generate(ast) : data);
     stream.queue(null);
   }
 };
@@ -123,30 +102,41 @@ function isReturn(node) {
   return node.type == 'ReturnStatement';
 }
 
-function createProgram(body) {
-  return { type: 'Program',
-    body: body };
-}
-
 function createRequires(ids, vars) {
-  var decls = [];
-  
-  for (var i = 0, len = ids.length; i < len; ++i) {
-    if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
-    
-    decls.push({ type: 'VariableDeclarator',
-      id: { type: 'Identifier', name: vars[i] },
-      init: 
-        { type: 'CallExpression',
-          callee: { type: 'Identifier', name: 'require' },
-          arguments: [ { type: 'Literal', value: ids[i] } ] } });
+  var body = [];
+  var declarations = [];
+
+  vars.forEach(function(variable, i) {
+    if (/^(require|module|exports)$/.test(ids[i])) return;
+
+    declarations.push({
+      type: 'VariableDeclarator',
+      id: {type: 'Identifier', name: variable},
+      init: ids[i] ? {
+        type: 'CallExpression',
+        callee: {type: 'Identifier', name: 'require'},
+        arguments: [{type: 'Literal', value: ids[i]}]
+      } : null
+    });
+  });
+
+  if (declarations.length) {
+    body.push({
+      type: 'VariableDeclaration',
+      declarations: declarations,
+      kind: 'var'
+    });
   }
-  
-  if (decls.length == 0) { return []; }
-  
-  return [{ type: 'VariableDeclaration',
-    declarations: decls,
-    kind: 'var' }];
+
+  ids.slice(vars.length).forEach(function(id) {
+    body.push(createExpression({
+      type: 'CallExpression',
+      callee: {type: 'Identifier', name: 'require'},
+      arguments: [{type: 'Literal', value: id}]
+    }));
+  });
+
+  return body;
 }
 
 function createModuleExport(obj) {
@@ -162,24 +152,22 @@ function createModuleExport(obj) {
        right: obj } };
 }
 
-function iife(body) {
+function createIife(body) {
   if (Array.isArray(body)) {
-    body = {
-      type: 'BlockStatement',
-      body: body
-    };
+    body = {type: 'BlockStatement', body: body};
   }
-  return {
-    type: 'ExpressionStatement',
-    expression: {
-      type: 'CallExpression',
-      callee: {
-        type: 'FunctionExpression',
-        params: [],
-        defaults: [],
-        body: body
-      },
-      arguments: []
-    }
-  };
+  return createExpression({
+    type: 'CallExpression',
+    callee: {
+      type: 'FunctionExpression',
+      params: [],
+      defaults: [],
+      body: body
+    },
+    arguments: []
+  });
+}
+
+function createExpression(expression) {
+  return {type: 'ExpressionStatement', expression: expression};
 }
