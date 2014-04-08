@@ -4,8 +4,7 @@
 var through = require('through')
   , esprima = require('esprima')
   , estraverse = require('estraverse')
-  , escodegen = require('escodegen')
-  , util = require('util');
+  , escodegen = require('escodegen');
 
 
 /**
@@ -34,10 +33,6 @@ module.exports = function (file) {
   function end() {
     var ast = esprima.parse(data)
       , isAMD = false;
-    
-    //console.log('-- ORIGINAL AST --');
-    //console.log(util.inspect(ast, false, null));
-    //console.log('------------------');
     
     // TODO: Ensure that define is a free variable.
     // TODO: Implement support for amdWeb UMD modules.
