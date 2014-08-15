@@ -1,0 +1,1 @@
+define(["thing", "some-thing"], function(thing) {return {thing: thing.hi};});
