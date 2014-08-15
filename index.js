@@ -83,7 +83,7 @@ module.exports = function (file) {
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
             if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
+              tast = createProgram(reqs.concat(factory.body.body));
             } else {
               tast = createProgram(factory.body.body);
             }
@@ -96,7 +96,7 @@ module.exports = function (file) {
             var vars = factory.params.map(function(el) { return el.name });
             var reqs = createRequires(ids, vars);
             if (reqs) {
-              tast = createProgram([reqs].concat(factory.body.body));
+              tast = createProgram(reqs.concat(factory.body.body));
             } else {
               tast = createProgram(factory.body.body);
             }
@@ -150,24 +150,39 @@ function createProgram(body) {
 }
 
 function createRequires(ids, vars) {
-  var decls = [];
-  
+  var decls = [], expns = [], ast = [];
+
   for (var i = 0, len = ids.length; i < len; ++i) {
     if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
-    
-    decls.push({ type: 'VariableDeclarator',
-      id: { type: 'Identifier', name: vars[i] },
-      init: 
+    if (typeof vars[i] === "undefined") {
+      expns.push({ type: 'ExpressionStatement',
+        expression:
+        { type: 'CallExpression',
+          callee: { type: 'Identifier', name: 'require'},
+          arguments: [ { type: 'Literal', value: ids[i] } ] } });
+    } else {
+      decls.push({ type: 'VariableDeclarator',
+        id: { type: 'Identifier', name: vars[i] },
+        init:
         { type: 'CallExpression',
           callee: { type: 'Identifier', name: 'require' },
           arguments: [ { type: 'Literal', value: ids[i] } ] } });
+    }
   }
-  
-  if (decls.length == 0) { return null; }
-  
-  return { type: 'VariableDeclaration',
-    declarations: decls,
-    kind: 'var' };
+
+  if (decls.length == 0 && expns.length == 0) { return null; }
+
+  if (decls.length > 0) {
+    ast.push({ type: 'VariableDeclaration',
+      declarations: decls,
+      kind: 'var' });
+  }
+
+  if (expns.length > 0) {
+    ast = ast.concat(expns);
+  }
+
+  return ast;
 }
 
 function createModuleExport(obj) {
