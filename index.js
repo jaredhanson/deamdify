@@ -24,8 +24,9 @@ var through = require('through')
  * @return {Stream}
  * @api public
  */
-module.exports = function (file) {
+module.exports = function (file, options) {
   var data = '';
+  options = options || {};
   
   var stream = through(write, end);
   return stream;
@@ -81,7 +82,7 @@ module.exports = function (file) {
             
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
-            var reqs = createRequires(ids, vars);
+            var reqs = createRequires(ids, vars, options.rewrites);
             if (reqs) {
               tast = createProgram([reqs].concat(factory.body.body));
             } else {
@@ -94,7 +95,7 @@ module.exports = function (file) {
             
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
-            var reqs = createRequires(ids, vars);
+            var reqs = createRequires(ids, vars, options.rewrites);
             if (reqs) {
               tast = createProgram([reqs].concat(factory.body.body));
             } else {
@@ -149,18 +150,33 @@ function createProgram(body) {
     body: body };
 }
 
-function createRequires(ids, vars) {
-  var decls = [];
+function rewriteRequire(path, rewrites) {
+  var parts = path.split("/");
+  var module = parts[0];
+  if(rewrites && module in rewrites) {
+    var rest = parts.slice(1, parts.length);
+    var rewrittenModule = rewrites[module];
+    return [rewrittenModule].concat(rest).join("/")
+  } else {
+    return path;
+  }
+}
+
+function createRequires(ids, vars, rewrites) {
+  var decls = [],
+      id;
   
   for (var i = 0, len = ids.length; i < len; ++i) {
     if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
+
+    id = rewriteRequire(ids[i], rewrites);
     
     decls.push({ type: 'VariableDeclarator',
       id: { type: 'Identifier', name: vars[i] },
       init: 
         { type: 'CallExpression',
           callee: { type: 'Identifier', name: 'require' },
-          arguments: [ { type: 'Literal', value: ids[i] } ] } });
+          arguments: [ { type: 'Literal', value: id } ] } });
   }
   
   if (decls.length == 0) { return null; }
