@@ -1,5 +1,4 @@
-var deamdify = require('deamdify');
-
+var deamdify = require('../');
 
 describe('deamdify', function() {
     
