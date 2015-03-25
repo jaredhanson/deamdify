@@ -52,7 +52,7 @@ package as it builds a bundle.
 ## Tests
 
     $ npm install
-    $ make test
+    $ npm test
 
 [![Build Status](https://secure.travis-ci.org/jaredhanson/deamdify.png)](http://travis-ci.org/jaredhanson/deamdify)  [![David DM](https://david-dm.org/jaredhanson/deamdify.png)](http://david-dm.org/jaredhanson/deamdify)
 
@@ -64,4 +64,4 @@ package as it builds a bundle.
 
 [The MIT License](http://opensource.org/licenses/MIT)
 
-Copyright (c) 2013 Jared Hanson <[http://jaredhanson.net/](http://jaredhanson.net/)>
+Copyright (c) 2015 Jared Hanson <[http://jaredhanson.net/](http://jaredhanson.net/)>
