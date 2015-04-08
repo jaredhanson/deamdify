@@ -1,4 +1,4 @@
-var deamdify = require('deamdify')
+var deamdify = require('../index')
   , fs = require('fs')
   , Stream = require('stream');
 
