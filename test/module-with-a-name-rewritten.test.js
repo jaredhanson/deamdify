@@ -5,7 +5,7 @@ var deamdify = require('../')
 
 describe('deamdify\'ing AMD module that has a name', function() {
 
-  var stream = deamdify('test/data/module-with-a-name.js', { "rewrites": { "my": "mymodule/src" }})
+  var stream = deamdify('test/data/module-with-a-name.js', { "paths": { "my": "mymodule/src" }})
 
   it('should return a stream', function() {
     expect(stream).to.be.an.instanceOf(Stream);

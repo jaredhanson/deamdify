@@ -88,7 +88,7 @@ module.exports = function (file, options) {
 
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
-            var reqs = createRequires(ids, vars, options.rewrites);
+            var reqs = createRequires(ids, vars, options.paths);
             if (reqs) {
               tast = createProgram(reqs.concat(factory.body.body));
             } else {
@@ -105,7 +105,7 @@ module.exports = function (file, options) {
 
             var ids = dependencies.elements.map(function(el) { return el.value });
             var vars = factory.params.map(function(el) { return el.name });
-            var reqs = createRequires(ids, vars, options.rewrites);
+            var reqs = createRequires(ids, vars, options.paths);
             if (reqs) {
               tast = createProgram(reqs.concat(factory.body.body));
             } else {
@@ -160,26 +160,26 @@ function createProgram(body) {
     body: body };
 }
 
-function rewriteRequire(path, rewrites) {
+function rewriteRequire(path, paths) {
   var parts = path.split("/");
   var module = parts[0];
-  if(rewrites && module in rewrites) {
+  if(paths && module in paths) {
     var rest = parts.slice(1, parts.length);
-    var rewrittenModule = rewrites[module];
+    var rewrittenModule = paths[module];
     return [rewrittenModule].concat(rest).join("/")
   } else {
     return path;
   }
 }
 
-function createRequires(ids, vars, rewrites) {
+function createRequires(ids, vars, paths) {
   var decls = [], expns = [], ast = [],
       id;
 
   for (var i = 0, len = ids.length; i < len; ++i) {
     if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
 
-    id = rewriteRequire(ids[i], rewrites);
+    id = rewriteRequire(ids[i], paths);
 
     if (typeof vars[i] === "undefined") {
       expns.push({ type: 'ExpressionStatement',
