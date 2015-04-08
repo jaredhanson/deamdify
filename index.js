@@ -39,7 +39,7 @@ module.exports = function (file) {
     try {
       ast = esprima.parse(data)
     } catch (error) {
-      throw 'Error deamdifying ' + file + ': ' + error;
+      throw new Error('Error deamdifying ' + file + ': ' + error);
     }
 
     //console.log('-- ORIGINAL AST --');
