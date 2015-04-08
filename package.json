@@ -28,14 +28,14 @@
   ],
   "main": "index.js",
   "dependencies": {
-    "through": "2.x.x",
-    "esprima": "1.x.x",
-    "estraverse": "1.x.x",
-    "escodegen": "0.0.x"
+    "through": "^2.3.7",
+    "esprima": "^2.1.0",
+    "estraverse": "^3.1.0",
+    "escodegen": "^1.6.1"
   },
   "devDependencies": {
-    "mocha": "1.x.x",
-    "chai": "1.x.x"
+    "mocha": "^2.2.4",
+    "chai": "^2.2.0"
   },
   "scripts": {
     "test": "mocha --reporter spec --require test/bootstrap/node test/*.test.js"
