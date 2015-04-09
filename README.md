@@ -1,5 +1,7 @@
 # deAMDify
 
+[![Join the chat at https://gitter.im/jaredhanson/deamdify](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jaredhanson/deamdify?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 This module is a [browserify](http://browserify.org/) plugin that will transform
 [AMD](https://github.com/amdjs) modules into [Node.js](http://nodejs.org/)-style
 modules so that they can be included in browser-ified bundles.
