@@ -1,5 +1,10 @@
 # deAMDify
 
+[![Build Status](https://secure.travis-ci.org/jaredhanson/deamdify.png)](http://travis-ci.org/jaredhanson/deamdify) [![David DM](https://david-dm.org/jaredhanson/deamdify.png)](http://david-dm.org/jaredhanson/deamdify)
+
+
+**For when you're stuck and need help:**
+
 [![Join the chat at https://gitter.im/jaredhanson/deamdify](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jaredhanson/deamdify?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 This module is a [browserify](http://browserify.org/) plugin that will transform
@@ -55,8 +60,6 @@ package as it builds a bundle.
 
     $ npm install
     $ npm test
-
-[![Build Status](https://secure.travis-ci.org/jaredhanson/deamdify.png)](http://travis-ci.org/jaredhanson/deamdify)  [![David DM](https://david-dm.org/jaredhanson/deamdify.png)](http://david-dm.org/jaredhanson/deamdify)
 
 ## Credits
 
