@@ -39,8 +39,7 @@ module.exports = function (file, options) {
       , tast
       , isAMD = false;
 
-    if ('.json' !== ext.toLowerCase()) {
-
+    if (ext.toLowerCase() === '.js') {
       try {
         ast = esprima.parse(data)
       } catch (error) {
