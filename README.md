@@ -58,8 +58,12 @@ package as it builds a bundle.
 
 ## Tests
 
-    $ npm install
-    $ npm test
+```sh
+$ npm install
+# fast run
+$ npm run test-main
+# test all browserify major versions
+$ npm test
 
 ## Credits
 
