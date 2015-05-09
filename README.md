@@ -17,7 +17,9 @@ the resulting bundle can be used without the need for a separate loader such as
 
 ## Install
 
-    $ npm install deamdify
+```sh
+$ npm install deamdify
+```
 
 ## Usage
 
@@ -26,7 +28,9 @@ the resulting bundle can be used without the need for a separate loader such as
 Bundle up all required modules, including AMD modules, into a single file
 using `browserify` with the `deamdify` transform.
 
-    browserify -t deamdify main.js -o bundle.js
+```sh
+browserify -t deamdify main.js -o bundle.js
+```
 
 #### API
 
@@ -64,6 +68,7 @@ $ npm install
 $ npm run test-main
 # test all browserify major versions
 $ npm test
+```
 
 ## Credits
 
