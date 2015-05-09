@@ -34,11 +34,16 @@
     "escodegen": "^1.6.1"
   },
   "devDependencies": {
+    "chai": "^2.2.0",
     "mocha": "^2.2.4",
-    "chai": "^2.2.0"
+    "test-peer-range": "^1.0.1"
+  },
+  "peerDependencies": {
+    "browserify": ">= 2"
   },
   "scripts": {
-    "test": "mocha --reporter spec --require test/bootstrap/node test/*.test.js"
+    "test": "test-peer-range browserify",
+    "test-main": "mocha --reporter spec --require test/bootstrap/node test/*.test.js"
   },
   "engines": {
     "node": ">= 0.6.0"
