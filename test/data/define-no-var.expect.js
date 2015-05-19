@@ -1,3 +1,3 @@
-require('thing');
-require('some-thing');
-module.exports = 'toast';
+module.exports = function () {
+    return 'toast';
+}(require('thing'), require('some-thing'));

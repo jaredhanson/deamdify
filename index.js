@@ -6,7 +6,8 @@ var through = require('through')
   , estraverse = require('estraverse')
   , escodegen = require('escodegen')
   , path = require('path')
-  , util = require('util');
+  , util = require('util')
+  , support = require('./support');
 
 
 /**
@@ -80,64 +81,61 @@ module.exports = function (file, options) {
         },
         leave: function(node) {
           if (isAMD && (isDefine(node) || isAMDRequire(node))) {
-            if (node.arguments.length == 1 && node.arguments[0].type == 'FunctionExpression') {
-              var factory = node.arguments[0];
-
-              if (factory.params.length == 0) {
-                tast = createProgram(factory.body.body);
-                this.break();
-              } else if (factory.params.length > 0) {
-                // simplified CommonJS wrapper
-                tast = createProgram(factory.body.body);
-                this.break();
-              }
-            } else if (node.arguments.length == 1 && node.arguments[0].type == 'ObjectExpression') {
+            //define({})
+            if (node.arguments.length == 1 &&
+                node.arguments[0].type == 'ObjectExpression') {
               // object literal
               var obj = node.arguments[0];
 
-              tast = createModuleExport(obj);
+              tast = generateCommonJsModuleForObject(obj);
               this.break();
-            } else if (node.arguments.length == 1 && node.arguments[0].type == 'Identifier') {
+            } else
+            //define(function(){})
+            if (node.arguments.length == 1 &&
+                node.arguments[0].type == 'FunctionExpression') {
+              var dependenciesIds = extractDependencyIdsFromFactory(node.arguments[0]),
+                  factory = node.arguments[0];
+              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+              this.break();
+            } else
+            //define(variableName)
+            if (node.arguments.length == 1 &&
+                node.arguments[0].type == 'Identifier') {
               // reference
               var obj = node.arguments[0];
 
-              return createModuleExport(obj).expression;
-            } else if (node.arguments.length == 2 && node.arguments[0].type == 'ArrayExpression' && node.arguments[1].type == 'FunctionExpression') {
-              var dependencies = node.arguments[0]
+              return generateCommonJsModuleForObject(obj).expression;
+            } else
+            //define([],function(){})
+            if (node.arguments.length == 2 &&
+                node.arguments[0].type == 'ArrayExpression' &&
+                node.arguments[1].type == 'FunctionExpression') {
+              var dependenciesIds = extractDependencyIdsFromArrayExpression(node.arguments[0], options.paths)
                 , factory = node.arguments[1];
 
-              var ids = dependencies.elements.map(function(el) { return el.value });
-              var vars = factory.params.map(function(el) { return el.name });
-              var reqs = createRequires(ids, vars, options.paths);
-              if (reqs) {
-                tast = createProgram(reqs.concat(factory.body.body));
-              } else {
-                tast = createProgram(factory.body.body);
-              }
+              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
-            } else if (node.arguments.length == 2 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'FunctionExpression') {
-              var factory = node.arguments[1];
-              tast = createProgram(factory.body.body);
+            } else
+            //define('modulename',function(){})
+            if (node.arguments.length == 2 &&
+                node.arguments[0].type == 'Literal' &&
+                node.arguments[1].type == 'FunctionExpression') {
+              var dependenciesIds = extractDependencyIdsFromFactory(node.arguments[1])
+                , factory = node.arguments[1];
+
+              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
-            } else if (node.arguments.length == 3 && node.arguments[0].type == 'Literal' && node.arguments[1].type == 'ArrayExpression' && node.arguments[2].type == 'FunctionExpression') {
-              var dependencies = node.arguments[1]
+            } else
+            //define('modulename', [], function(){})
+            if (node.arguments.length == 3 &&
+                node.arguments[0].type == 'Literal' &&
+                node.arguments[1].type == 'ArrayExpression' &&
+                node.arguments[2].type == 'FunctionExpression') {
+              var dependenciesIds = extractDependencyIdsFromArrayExpression(node.arguments[1], options.paths)
                 , factory = node.arguments[2];
 
-              var ids = dependencies.elements.map(function(el) { return el.value });
-              var vars = factory.params.map(function(el) { return el.name });
-              var reqs = createRequires(ids, vars, options.paths);
-              if (reqs) {
-                tast = createProgram(reqs.concat(factory.body.body));
-              } else {
-                tast = createProgram(factory.body.body);
-              }
+              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
-            }
-          } else if (isReturn(node)) {
-            var parents = this.parents();
-
-            if (parents.length == 5 && (isDefine(parents[2]) || isAMDRequire(parents[2])) && isAMD) {
-              return createModuleExport(node.argument);
             }
           }
         }
@@ -162,6 +160,172 @@ module.exports = function (file, options) {
   }
 };
 
+function generateCommonJsModuleForObject(obj) {
+  return { type: 'ExpressionStatement',
+    expression:
+     { type: 'AssignmentExpression',
+       operator: '=',
+       left:
+        { type: 'MemberExpression',
+          computed: false,
+          object: { type: 'Identifier', name: 'module' },
+          property: { type: 'Identifier', name: 'exports' } },
+       right: obj } };
+}
+
+function extractDependencyIdsFromArrayExpression(dependencies, paths) {
+  return dependencies.elements.map(function(el) { return rewriteRequire(el.value, paths); });
+}
+
+function rewriteRequire(path, paths) {
+  var parts = path.split("/");
+  var module = parts[0];
+  if(paths && module in paths) {
+    var rest = parts.slice(1, parts.length);
+    var rewrittenModule = paths[module];
+    return [rewrittenModule].concat(rest).join("/")
+  } else {
+    return path;
+  }
+}
+
+function extractDependencyIdsFromFactory(factory) {
+  var parameters = factory.params.map(function(param){
+    if(param.type === 'Identifier') {
+      return param.name;
+    }
+  });
+
+  if(isCommonJsWrappingParameters(parameters)) {
+    return [];
+  } else {
+    return commonJsSpecialDependencies.slice(0, parameters.length);
+  }
+}
+
+function isCommonJsWrappingParameters(parameters) {
+  return parameters.length === commonJsSpecialDependencies.length
+        && parameters[0] === commonJsSpecialDependencies[0]
+        && parameters[1] === commonJsSpecialDependencies[1]
+        && parameters[2] === commonJsSpecialDependencies[2];
+}
+
+function generateCommonJsModuleForFactory(dependenciesIds, factory) {
+  var program,
+      exportResult = support.doesFactoryHaveReturn(factory);
+  if(dependenciesIds.length === 0 && !exportResult) {
+    program = factory.body.body;
+  } else {
+
+    var importExpressions = [];
+
+    //build imports
+    var imports;
+    if(dependenciesIds.length > 0) {
+        buildDependencyExpressions(dependenciesIds).forEach(function(expressions){
+            importExpressions.push(expressions.importExpression);
+        });
+    }
+
+    var callFactoryWithImports = {
+                "type": "CallExpression",
+                "callee": factory,
+                "arguments": importExpressions
+
+        };
+
+    var body;
+    if(exportResult) {
+      //wrap with assignment
+      body = {
+        "type": "ExpressionStatement",
+            "expression":{
+            "type": "AssignmentExpression",
+            "operator": "=",
+            "left": {
+                "type": "MemberExpression",
+                "computed": false,
+                "object": {
+                    "type": "Identifier",
+                    "name": "module"
+                },
+                "property": {
+                    "type": "Identifier",
+                    "name": "exports"
+                }
+            },
+            "right": callFactoryWithImports
+          }
+      };
+    } else {
+      body = {
+              "type": "ExpressionStatement",
+              "expression": callFactoryWithImports
+          };
+    }
+
+
+    //program
+    program = [body];
+  }
+  return { type: 'Program',
+           body: program };
+}
+
+//NOTE: this is the order as specified in RequireJS docs; don't changes
+var commonJsSpecialDependencies = ['require', 'exports', 'module'];
+function commonJsSpecialDependencyExpressionBuilder(dependencyId) {
+  if(commonJsSpecialDependencies.indexOf(dependencyId) !== -1) {
+    return {importExpression:{
+            "type": "Identifier",
+            "name": dependencyId
+        }
+    };
+  }
+}
+
+function defaultRequireDependencyExpressionBuilder(dependencyId) {
+  return {importExpression: {
+      "type": "CallExpression",
+      "callee": {
+          "type": "Identifier",
+          "name": "require"
+      },
+      "arguments": [
+          {
+              "type": "Literal",
+              "value": dependencyId
+          }
+      ]
+  }};
+}
+
+function buildDependencyExpressions(dependencyIdList) {
+  var dependencyExpressionBuilders = [
+    commonJsSpecialDependencyExpressionBuilder,
+    defaultRequireDependencyExpressionBuilder
+  ];
+
+  return dependencyIdList.map(function(dependencyId){
+    return dependencyExpressionBuilders.reduce(function(currentExpression, builder){
+        return currentExpression || builder(dependencyId);
+    },  null);
+  });
+}
+
+function buildVariableDeclaration(imports, loader) {
+  var declarations = [];
+  if (imports) {
+    declarations.push(imports);
+  }
+  declarations.push(loader);
+
+  return {
+    "type": "VariableDeclaration",
+    "declarations": declarations,
+    "kind": "var"
+  };
+}
 
 function isDefine(node) {
   var callee = node.callee;
@@ -228,78 +392,4 @@ function isAMDRequire(node) {
     && callee.type == 'Identifier'
     && callee.name == 'require'
   ;
-}
-
-function isReturn(node) {
-  return node.type == 'ReturnStatement';
-}
-
-function createProgram(body) {
-  return { type: 'Program',
-    body: body };
-}
-
-function rewriteRequire(path, paths) {
-  var parts = path.split("/");
-  var module = parts[0];
-  if(paths && module in paths) {
-    var rest = parts.slice(1, parts.length);
-    var rewrittenModule = paths[module];
-    return [rewrittenModule].concat(rest).join("/")
-  } else {
-    return path;
-  }
-}
-
-function createRequires(ids, vars, paths) {
-  var decls = [], expns = [], ast = [],
-      id;
-
-  for (var i = 0, len = ids.length; i < len; ++i) {
-    if (['require', 'module', 'exports'].indexOf(ids[i]) != -1) { continue; }
-
-    id = rewriteRequire(ids[i], paths);
-
-    if (typeof vars[i] === "undefined") {
-      expns.push({ type: 'ExpressionStatement',
-        expression:
-        { type: 'CallExpression',
-          callee: { type: 'Identifier', name: 'require'},
-          arguments: [ { type: 'Literal', value: ids[i] } ] } });
-    } else {
-      decls.push({ type: 'VariableDeclarator',
-        id: { type: 'Identifier', name: vars[i] },
-        init:
-        { type: 'CallExpression',
-          callee: { type: 'Identifier', name: 'require' },
-          arguments: [ { type: 'Literal', value: id } ] } });
-    }
-  }
-
-  if (decls.length == 0 && expns.length == 0) { return null; }
-
-  if (decls.length > 0) {
-    ast.push({ type: 'VariableDeclaration',
-      declarations: decls,
-      kind: 'var' });
-  }
-
-  if (expns.length > 0) {
-    ast = ast.concat(expns);
-  }
-
-  return ast;
-}
-
-function createModuleExport(obj) {
-  return { type: 'ExpressionStatement',
-    expression:
-     { type: 'AssignmentExpression',
-       operator: '=',
-       left:
-        { type: 'MemberExpression',
-          computed: false,
-          object: { type: 'Identifier', name: 'module' },
-          property: { type: 'Identifier', name: 'exports' } },
-       right: obj } };
 }

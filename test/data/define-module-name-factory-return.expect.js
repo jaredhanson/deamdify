@@ -1,2 +1,4 @@
-var foo = require('foo');
-module.exports = { bar: {} };
+module.exports = function (require) {
+    var foo = require('foo');
+    return { bar: {} };
+}(require);
