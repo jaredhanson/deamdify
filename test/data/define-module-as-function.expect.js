@@ -1,4 +1,5 @@
-var cart = require('my/cart'), inventory = require('my/inventory');
-module.exports = function (title) {
-    return title ? window.title = title : inventory.storeName + ' ' + cart.name;
-};
+module.exports = function (cart, inventory) {
+    return function (title) {
+        return title ? window.title = title : inventory.storeName + ' ' + cart.name;
+    };
+}(require('my/cart'), require('my/inventory'));

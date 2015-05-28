@@ -11,6 +11,6 @@ require(["./cart", "./inventory"], function(cart, inventory) {
                 inventory.decrement(this);
                 cart.add(this);
             }
-        }
+        };
     }
 );

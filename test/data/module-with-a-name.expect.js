@@ -1,4 +1,5 @@
-var cart = require('my/cart'), inventory = require('my/inventory');
-function Foo() {
-}
-module.exports = Foo;
+module.exports = function (cart, inventory) {
+    function Foo() {
+    }
+    return Foo;
+}(require('my/cart'), require('my/inventory'));

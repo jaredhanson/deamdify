@@ -3,9 +3,9 @@ var deamdify = require('../')
   , Stream = require('stream');
 
 
-describe('deamdify\'ing AMD module that has a name and a re-written path', function() {
+describe('deamdify\'ing AMD module using a definition name and function', function() {
 
-  var stream = deamdify('test/data/module-with-a-name.js', { "paths": { "my": "mymodule/src" }})
+  var stream = deamdify('test/data/definition-name-function.js')
 
   it('should return a stream', function() {
     expect(stream).to.be.an.instanceOf(Stream);
@@ -17,12 +17,12 @@ describe('deamdify\'ing AMD module that has a name and a re-written path', funct
       output += buf;
     });
     stream.on('end', function() {
-      var expected = fs.readFileSync('test/data/module-with-a-name-rewritten.expect.js', 'utf8')
+      var expected = fs.readFileSync('test/data/definition-name-function.expect.js', 'utf8')
       expect(output).to.be.equal(expected);
       done();
     });
 
-    var file = fs.createReadStream('test/data/module-with-a-name.js');
+    var file = fs.createReadStream('test/data/definition-name-function.js');
     file.pipe(stream);
   });
 
