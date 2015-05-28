@@ -116,6 +116,21 @@ module.exports = function (file, options) {
               tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
             } else
+            //define("a b c".split(' '), function(){})
+            if (node.arguments.length == 2 &&
+                node.arguments[0].type == 'CallExpression' &&
+                node.arguments[1].type == 'FunctionExpression') {
+              try {
+                var dependenciesCode = node.arguments[0]
+                  , dependenciesIds = extractDependencyIdsFromCallExpression(dependenciesCode, options.paths)
+                  , factory = node.arguments[1];
+
+                tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+                this.break();
+              } catch(e) {
+                console.log("failed to evaluate dependencies:", dependenciesCode, e)
+              }
+            } else
             //define('modulename',function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'Literal' &&
@@ -136,6 +151,22 @@ module.exports = function (file, options) {
 
               tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
+            } else
+            //define('modulename', "a b c".split(' '), function(){})
+            if (node.arguments.length == 3 &&
+                node.arguments[0].type == 'Literal' &&
+                node.arguments[1].type == 'CallExpression' &&
+                node.arguments[2].type == 'FunctionExpression') {
+              try {
+                var dependenciesCode = node.arguments[1]
+                  , dependenciesIds = extractDependencyIdsFromCallExpression(dependenciesCode, options.paths)
+                  , factory = node.arguments[2];
+
+                tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+                this.break();
+              } catch(e) {
+                console.log("failed to evaluate dependencies:", dependenciesCode, e)
+              }
             }
           }
         }
@@ -175,6 +206,12 @@ function generateCommonJsModuleForObject(obj) {
 
 function extractDependencyIdsFromArrayExpression(dependencies, paths) {
   return dependencies.elements.map(function(el) { return rewriteRequire(el.value, paths); });
+}
+
+
+function extractDependencyIdsFromCallExpression(callExpression, paths) {
+  var ids = eval(escodegen.generate(callExpression));
+  return ids.map(function(id) { return rewriteRequire(id, paths); });
 }
 
 function rewriteRequire(path, paths) {
