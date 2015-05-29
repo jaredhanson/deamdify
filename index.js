@@ -7,7 +7,8 @@ var through = require('through')
   , escodegen = require('escodegen')
   , path = require('path')
   , util = require('util')
-  , support = require('./support');
+  , support = require('./support')
+  , createPluginDependencyExpressionBuilder = require('./pluginSupport');
 
 
 /**
@@ -340,6 +341,7 @@ function defaultRequireDependencyExpressionBuilder(dependencyId) {
 function buildDependencyExpressions(dependencyIdList) {
   var dependencyExpressionBuilders = [
     commonJsSpecialDependencyExpressionBuilder,
+    createPluginDependencyExpressionBuilder(),
     defaultRequireDependencyExpressionBuilder
   ];
 
