@@ -1,8 +1,9 @@
-var m__my_plug_in = require('./my/plug-in'), pluginValue0, pluginValue1;
+var m__my_plug_in = require('./my/plug-in'), pluginValue0;
 m__my_plug_in.load('paramname1', function () {
 }, function (r) {
     pluginValue0 = r;
 });
+var pluginValue1;
 m__my_plug_in.load('paramname2', function () {
 }, function (r) {
     pluginValue1 = r;

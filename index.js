@@ -255,14 +255,18 @@ function generateCommonJsModuleForFactory(dependenciesIds, factory) {
     program = factory.body.body;
   } else {
 
-    var importExpressions = [];
+    var preImports = [],
+        importExpressions = [];
 
     //build imports
     var imports;
     if(dependenciesIds.length > 0) {
-        buildDependencyExpressions(dependenciesIds).forEach(function(expressions){
-            importExpressions.push(expressions.importExpression);
-        });
+      buildDependencyExpressions(dependenciesIds).forEach(function(expressions){
+        if(expressions.preImportExpressions) {
+          [].push.apply(preImports, expressions.preImportExpressions);
+        }
+        importExpressions.push(expressions.importExpression);
+      });
     }
 
     var callFactoryWithImports = {
@@ -304,7 +308,11 @@ function generateCommonJsModuleForFactory(dependenciesIds, factory) {
 
 
     //program
-    program = [body];
+    program = [];
+    if (preImports.length > 0) {
+      [].push.apply(program, preImports);
+    }
+    program.push(body);
   }
   return { type: 'Program',
            body: program };

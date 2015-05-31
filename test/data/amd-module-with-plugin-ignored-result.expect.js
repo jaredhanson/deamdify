@@ -5,7 +5,6 @@ m__my_plug_in.load('paramname', function () {
 });
 module.exports = function (cart) {
     function Foo() {
-        return paramvalue;
     }
     return Foo;
 }(require('my/cart'), pluginValue0);
