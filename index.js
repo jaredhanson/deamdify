@@ -43,7 +43,7 @@ module.exports = function (file, options) {
       , isUMD = false
       , supportsCommonJs = false;
 
-    if (~options.extensions.indexOf(ext.toLowerCase())) {
+    if (options.extensions.indexOf(ex.toLowerCase()) > -1) {
       try {
         ast = esprima.parse(data)
       } catch (error) {
