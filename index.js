@@ -30,6 +30,7 @@ module.exports = function (file, options) {
   var data = '';
   var ext = path.extname(file);
   options = options || {};
+  options.extensions = options.extensions || ['.js'];
 
   var stream = through(write, end);
   return stream;
@@ -42,7 +43,7 @@ module.exports = function (file, options) {
       , isUMD = false
       , supportsCommonJs = false;
 
-    if (ext.toLowerCase() === '.js') {
+    if (~options.extensions.indexOf(ext.toLowerCase())) {
       try {
         ast = esprima.parse(data)
       } catch (error) {
