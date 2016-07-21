@@ -1,6 +1,8 @@
-var foo = function bar() {}
-function factory() {}
+var foo = function bar() {
+};
 if (true) {
     foo();
     module.exports = factory;
+}
+function factory() {
 }
