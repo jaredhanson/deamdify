@@ -251,14 +251,12 @@ function generateCommonJsModuleForFactory(dependenciesIds, factory) {
   if(dependenciesIds.length === 0 && !exportResult) {
     return {
       "type": "CallExpression",
-      "callee": {
-        "type": "FunctionExpression",
-        "id": null,
-        "params": [],
-        "defaults": [],
-        "body": factory.body
-      },
-      "arguments": []
+      "callee": factory,
+      "arguments": [
+        { "type": "Identifier", "name": "require" },
+        { "type": "Identifier", "name": "exports" },
+        { "type": "Identifier", "name": "module" }
+      ]
     };
   } else {
 
