@@ -1,10 +1,11 @@
 var foo;
-factory();
 if (true) {
     module.exports = function () {
+        var foo = 'good';
+        evil();
         return foo;
     }();
 }
-function factory() {
-    foo = {};
+function evil() {
+    foo = 'evil';
 }

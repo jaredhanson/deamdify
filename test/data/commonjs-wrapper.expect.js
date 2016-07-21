@@ -1,3 +1,5 @@
-var a = require('a'), b = require('b');
-exports.action = function () {
-};
+(function () {
+    var a = require('a'), b = require('b');
+    exports.action = function () {
+    };
+}());

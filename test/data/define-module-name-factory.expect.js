@@ -1,2 +1,4 @@
-var foo = require('foo');
-exports.bar = {};
+(function () {
+    var foo = require('foo');
+    exports.bar = {};
+}());

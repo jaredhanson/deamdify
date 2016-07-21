@@ -1,10 +1,13 @@
 var foo;
-factory();
 if (typeof define === 'function' && define.amd) {
-    define(function () { return foo; });
+    define(function () {
+        var foo = 'good';
+        evil();
+        return foo;
+    });
 } else {
     root.myModule = foo;
 }
-function factory() {
-    foo = {};
+function evil() {
+    foo = 'evil';
 }
