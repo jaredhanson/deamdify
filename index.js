@@ -110,7 +110,7 @@ module.exports = function (file, options) {
             //define([],function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'ArrayExpression' &&
-                node.arguments[1].type == 'FunctionExpression') {
+                (node.arguments[1].type == 'FunctionExpression' || node.arguments[1].type == 'Identifier')) {
               var dependenciesIds = extractDependencyIdsFromArrayExpression(node.arguments[0], options.paths)
                 , factory = node.arguments[1];
 
@@ -120,7 +120,7 @@ module.exports = function (file, options) {
             //define("a b c".split(' '), function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'CallExpression' &&
-                node.arguments[1].type == 'FunctionExpression') {
+                (node.arguments[1].type == 'FunctionExpression' || node.arguments[1].type == 'Identifier')) {
               try {
                 var dependenciesCode = node.arguments[0]
                   , dependenciesIds = extractDependencyIdsFromCallExpression(dependenciesCode, options.paths)
@@ -135,7 +135,7 @@ module.exports = function (file, options) {
             //define('modulename',function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'Literal' &&
-                node.arguments[1].type == 'FunctionExpression') {
+                (node.arguments[1].type == 'FunctionExpression' || node.arguments[1].type == 'Identifier')) {
               var dependenciesIds = extractDependencyIdsFromFactory(node.arguments[1])
                 , factory = node.arguments[1];
 
@@ -146,7 +146,7 @@ module.exports = function (file, options) {
             if (node.arguments.length == 3 &&
                 node.arguments[0].type == 'Literal' &&
                 node.arguments[1].type == 'ArrayExpression' &&
-                node.arguments[2].type == 'FunctionExpression') {
+                (node.arguments[2].type == 'FunctionExpression' || node.arguments[2].type == 'Identifier')) {
               var dependenciesIds = extractDependencyIdsFromArrayExpression(node.arguments[1], options.paths)
                 , factory = node.arguments[2];
 
@@ -157,7 +157,7 @@ module.exports = function (file, options) {
             if (node.arguments.length == 3 &&
                 node.arguments[0].type == 'Literal' &&
                 node.arguments[1].type == 'CallExpression' &&
-                node.arguments[2].type == 'FunctionExpression') {
+                (node.arguments[2].type == 'FunctionExpression' || node.arguments[2].type == 'Identifier')) {
               try {
                 var dependenciesCode = node.arguments[1]
                   , dependenciesIds = extractDependencyIdsFromCallExpression(dependenciesCode, options.paths)
@@ -247,7 +247,7 @@ function isCommonJsWrappingParameters(parameters) {
 
 function generateCommonJsModuleForFactory(dependenciesIds, factory) {
   var program,
-      exportResult = support.doesFactoryHaveReturn(factory);
+      exportResult = factory.type !== 'FunctionExpression' || support.doesFactoryHaveReturn(factory);
   if(dependenciesIds.length === 0 && !exportResult) {
     return {
       "type": "CallExpression",
