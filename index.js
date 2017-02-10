@@ -38,7 +38,6 @@ module.exports = function (file, options) {
   function write(buf) { data += buf }
   function end() {
     var ast
-      , tast
       , isAMD = false
       , isUMD = false
       , supportsCommonJs = false;
@@ -81,6 +80,7 @@ module.exports = function (file, options) {
           }
         },
         leave: function(node) {
+          var tnode;
           if (isAMD && (isDefine(node) || isAMDRequire(node))) {
             //define({})
             if (node.arguments.length == 1 &&
@@ -88,7 +88,7 @@ module.exports = function (file, options) {
               // object literal
               var obj = node.arguments[0];
 
-              tast = generateCommonJsModuleForObject(obj);
+              tnode = generateCommonJsModuleForObject(obj);
               this.break();
             } else
             //define(function(){})
@@ -96,7 +96,7 @@ module.exports = function (file, options) {
                 node.arguments[0].type == 'FunctionExpression') {
               var dependenciesIds = extractDependencyIdsFromFactory(node.arguments[0]),
                   factory = node.arguments[0];
-              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+              tnode = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
             } else
             //define(variableName)
@@ -105,28 +105,28 @@ module.exports = function (file, options) {
               // reference
               var obj = node.arguments[0];
 
-              return generateCommonJsModuleForObject(obj).expression;
+              tnode = generateCommonJsModuleForObject(obj);
             } else
             //define([],function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'ArrayExpression' &&
-                node.arguments[1].type == 'FunctionExpression') {
+                (node.arguments[1].type == 'FunctionExpression' || node.arguments[1].type == 'Identifier')) {
               var dependenciesIds = extractDependencyIdsFromArrayExpression(node.arguments[0], options.paths)
                 , factory = node.arguments[1];
 
-              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+              tnode = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
             } else
             //define("a b c".split(' '), function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'CallExpression' &&
-                node.arguments[1].type == 'FunctionExpression') {
+                (node.arguments[1].type == 'FunctionExpression' || node.arguments[1].type == 'Identifier')) {
               try {
                 var dependenciesCode = node.arguments[0]
                   , dependenciesIds = extractDependencyIdsFromCallExpression(dependenciesCode, options.paths)
                   , factory = node.arguments[1];
 
-                tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+                tnode = generateCommonJsModuleForFactory(dependenciesIds, factory);
                 this.break();
               } catch(e) {
                 console.log("failed to evaluate dependencies:", dependenciesCode, e)
@@ -135,41 +135,42 @@ module.exports = function (file, options) {
             //define('modulename',function(){})
             if (node.arguments.length == 2 &&
                 node.arguments[0].type == 'Literal' &&
-                node.arguments[1].type == 'FunctionExpression') {
+                (node.arguments[1].type == 'FunctionExpression' || node.arguments[1].type == 'Identifier')) {
               var dependenciesIds = extractDependencyIdsFromFactory(node.arguments[1])
                 , factory = node.arguments[1];
 
-              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+              tnode = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
             } else
             //define('modulename', [], function(){})
             if (node.arguments.length == 3 &&
                 node.arguments[0].type == 'Literal' &&
                 node.arguments[1].type == 'ArrayExpression' &&
-                node.arguments[2].type == 'FunctionExpression') {
+                (node.arguments[2].type == 'FunctionExpression' || node.arguments[2].type == 'Identifier')) {
               var dependenciesIds = extractDependencyIdsFromArrayExpression(node.arguments[1], options.paths)
                 , factory = node.arguments[2];
 
-              tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+              tnode = generateCommonJsModuleForFactory(dependenciesIds, factory);
               this.break();
             } else
             //define('modulename', "a b c".split(' '), function(){})
             if (node.arguments.length == 3 &&
                 node.arguments[0].type == 'Literal' &&
                 node.arguments[1].type == 'CallExpression' &&
-                node.arguments[2].type == 'FunctionExpression') {
+                (node.arguments[2].type == 'FunctionExpression' || node.arguments[2].type == 'Identifier')) {
               try {
                 var dependenciesCode = node.arguments[1]
                   , dependenciesIds = extractDependencyIdsFromCallExpression(dependenciesCode, options.paths)
                   , factory = node.arguments[2];
 
-                tast = generateCommonJsModuleForFactory(dependenciesIds, factory);
+                tnode = generateCommonJsModuleForFactory(dependenciesIds, factory);
                 this.break();
               } catch(e) {
                 console.log("failed to evaluate dependencies:", dependenciesCode, e)
               }
             }
           }
+          return tnode;
         }
       });
     }
@@ -180,29 +181,25 @@ module.exports = function (file, options) {
       return;
     }
 
-    tast = tast || ast;
-
     //console.log('-- TRANSFORMED AST --');
-    //console.log(util.inspect(tast, false, null));
+    //console.log(util.inspect(ast, false, null));
     //console.log('---------------------');
 
-    var out = escodegen.generate(tast);
+    var out = escodegen.generate(ast);
     stream.queue(out);
     stream.queue(null);
   }
 };
 
 function generateCommonJsModuleForObject(obj) {
-  return { type: 'ExpressionStatement',
-    expression:
-     { type: 'AssignmentExpression',
-       operator: '=',
-       left:
-        { type: 'MemberExpression',
-          computed: false,
-          object: { type: 'Identifier', name: 'module' },
-          property: { type: 'Identifier', name: 'exports' } },
-       right: obj } };
+  return { type: 'AssignmentExpression',
+    operator: '=',
+    left:
+    { type: 'MemberExpression',
+      computed: false,
+      object: { type: 'Identifier', name: 'module' },
+      property: { type: 'Identifier', name: 'exports' } },
+    right: obj };
 }
 
 function extractDependencyIdsFromArrayExpression(dependencies, paths) {
@@ -250,9 +247,17 @@ function isCommonJsWrappingParameters(parameters) {
 
 function generateCommonJsModuleForFactory(dependenciesIds, factory) {
   var program,
-      exportResult = support.doesFactoryHaveReturn(factory);
+      exportResult = factory.type !== 'FunctionExpression' || support.doesFactoryHaveReturn(factory);
   if(dependenciesIds.length === 0 && !exportResult) {
-    program = factory.body.body;
+    return {
+      "type": "CallExpression",
+      "callee": factory,
+      "arguments": [
+        { "type": "Identifier", "name": "require" },
+        { "type": "Identifier", "name": "exports" },
+        { "type": "Identifier", "name": "module" }
+      ]
+    };
   } else {
 
     var importExpressions = [];
@@ -276,38 +281,28 @@ function generateCommonJsModuleForFactory(dependenciesIds, factory) {
     if(exportResult) {
       //wrap with assignment
       body = {
-        "type": "ExpressionStatement",
-            "expression":{
-            "type": "AssignmentExpression",
-            "operator": "=",
-            "left": {
-                "type": "MemberExpression",
-                "computed": false,
-                "object": {
-                    "type": "Identifier",
-                    "name": "module"
-                },
-                "property": {
-                    "type": "Identifier",
-                    "name": "exports"
-                }
-            },
-            "right": callFactoryWithImports
+        "type": "AssignmentExpression",
+        "operator": "=",
+        "left": {
+          "type": "MemberExpression",
+          "computed": false,
+          "object": {
+            "type": "Identifier",
+            "name": "module"
+          },
+          "property": {
+            "type": "Identifier",
+            "name": "exports"
           }
+        },
+        "right": callFactoryWithImports
       };
     } else {
-      body = {
-              "type": "ExpressionStatement",
-              "expression": callFactoryWithImports
-          };
+      body = callFactoryWithImports;
     }
 
-
-    //program
-    program = [body];
+    return body;
   }
-  return { type: 'Program',
-           body: program };
 }
 
 //NOTE: this is the order as specified in RequireJS docs; don't changes
