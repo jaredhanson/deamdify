@@ -1,6 +1,6 @@
 {
   "name": "deamdify",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Browserify transform that converts AMD to CommonJS.",
   "keywords": [
     "browserify",
@@ -28,18 +28,18 @@
   ],
   "main": "index.js",
   "dependencies": {
-    "through": "^2.3.7",
+    "through": "^2.3.8",
     "esprima": "^2.1.0",
-    "estraverse": "^3.1.0",
-    "escodegen": "^1.6.1"
+    "estraverse": "^4.2.0",
+    "escodegen": "^1.8.1"
   },
   "devDependencies": {
-    "chai": "^2.2.0",
-    "mocha": "^2.2.4",
+    "chai": "^3.5.0",
+    "mocha": "^3.2.0",
     "test-peer-range": "^1.0.1"
   },
   "peerDependencies": {
-    "browserify": ">= 2"
+    "browserify": ">= 2.0"
   },
   "scripts": {
     "test": "test-peer-range browserify",
